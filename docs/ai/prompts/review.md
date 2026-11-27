@@ -1,7 +1,9 @@
 # Shared code review prompt
 
 This prompt is used **verbatim by every agent** (Claude Code via `/review-pr`, Codex via
-`codex exec`), so that reviews can be compared on equal terms. Do not adapt it per tool.
+`codex exec` or its chat), so that reviews can be compared on equal terms. Do not adapt it per tool.
+Keep this file ASCII-only: Windows PowerShell 5.1 reads UTF-8 files without BOM as ANSI and would
+mangle non-ASCII characters before they reach the agent.
 
 ---
 
@@ -18,20 +20,20 @@ a strict but fair reviewer. You do not modify any files.
 
 ## What to check
 
-- **Correctness** — bugs, edge cases, wrong assumptions.
-- **Behaviour preservation** — `TimeDepositCalculator.updateBalance` must behave bit-for-bit
+- **Correctness** - bugs, edge cases, wrong assumptions.
+- **Behaviour preservation** - `TimeDepositCalculator.updateBalance` must behave bit-for-bit
   as before (boundaries, rounding, unknown plan types).
-- **README constraints** — `TimeDeposit` API, `updateBalance` signature, exactly two endpoints,
+- **README constraints** - `TimeDeposit` API, `updateBalance` signature, exactly two endpoints,
   no changes in other language folders.
-- **Architecture** — hexagonal boundaries, dependency direction, framework-free domain.
-- **Tests** — do they prove what they claim? Missing cases (especially boundaries)? Exact assertions,
+- **Architecture** - hexagonal boundaries, dependency direction, framework-free domain.
+- **Tests** - do they prove what they claim? Missing cases (especially boundaries)? Exact assertions,
   computed independently of production code? Any test that would still pass if the behaviour broke?
-- **Dead code and AI artifacts** — unused classes, methods, parameters, imports, dependencies,
+- **Dead code and AI artifacts** - unused classes, methods, parameters, imports, dependencies,
   commented-out code, TODOs, placeholders, speculative abstractions without a current use,
   duplicated logic, leftovers of replaced code.
-- **Design and clean code** — SOLID, naming, duplication, unnecessary complexity, Java 21 idioms.
-- **Commits** — atomic, Conventional Commits, tests green after each commit (judge from the log).
-- **Documentation** — assumptions documented, docs consistent with code.
+- **Design and clean code** - SOLID, naming, duplication, unnecessary complexity, Java 21 idioms.
+- **Commits** - atomic, Conventional Commits, tests green after each commit (judge from the log).
+- **Documentation** - assumptions documented, docs consistent with code.
 
 ## Rules
 
@@ -41,15 +43,15 @@ a strict but fair reviewer. You do not modify any files.
 - Order findings by severity.
 
 Severity:
-- `blocker` — breaks a README constraint, a test, or behaviour of `updateBalance`.
-- `major` — real bug, significant design / architecture problem, dead code, or a test that does not
+- `blocker` - breaks a README constraint, a test, or behaviour of `updateBalance`.
+- `major` - real bug, significant design / architecture problem, dead code, or a test that does not
   actually verify the behaviour it claims to verify.
-- `minor` — maintainability, missing test, unclear code.
-- `nit` — style or naming detail.
+- `minor` - maintainability, missing test, unclear code.
+- `nit` - style or naming detail.
 
 ## Output format (exactly this, nothing before the heading)
 
-### Review: <branch name> vs <base> — <tool and model name>
+### Review: <branch name> vs <base> - <tool and model name>
 
 Tests: <passed / failed / not run (reason)>
 
