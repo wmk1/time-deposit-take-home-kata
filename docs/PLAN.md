@@ -4,6 +4,28 @@ Implementation language: **Java** (`java/` folder). The other language folders
 (`kotlin/`, `python/`, `c#/`, `typescript/`) are intentionally left untouched as reference
 implementations — the requirements are met by a single implementation.
 
+## Evaluation context
+
+- **Deadline: 28 November, 18:00.** Scope below is cut to what fits; nothing optional is started
+  before the required parts are done and verified.
+- The most common rejection reasons named by the recruiter: **poorly written tests** and
+  **AI mistakes such as dead code**. Both are hard rules in `AGENTS.md` and explicit categories
+  in the review prompt.
+- An accepted solution is followed by a 1-hour live coding session that extends it with new
+  requirements: the design must be easy to change, and every line must be understood by the developer.
+- The brief asks for Java >= 17; this solution targets Java 21 (prerequisite stated in README).
+
+### PR plan
+
+| PR | Phases | Author | Reviewer |
+|---|---|---|---|
+| 1 | 0 — foundations, AI harness | Claude (chat) | Codex + Claude Code (calibration) |
+| 2 | 1–3 — characterization tests, modules, calculator refactoring | Claude Code | Codex |
+| 3 | 4–7 — domain, persistence, REST, application | Codex | Claude Code |
+| 4 | 8 — documentation, fixes from the final review | Claude Code | Codex + Claude Code (final, blind) |
+
+Only if time remains after PR 4: CI on GitHub Actions (JDK 21 and 25).
+
 ## Stack decisions
 
 | Area | Choice | Why |
@@ -13,7 +35,7 @@ implementations — the requirements are met by a single implementation.
 | API contract | OpenAPI 3 (`openapi.yaml`), contract-first via `openapi-generator-maven-plugin` | Preferred stack; contract is the source of truth |
 | API docs / UI | springdoc-openapi 3.x (Swagger UI) | Matches Spring Boot 4 |
 | Persistence | PostgreSQL, Flyway, `JdbcClient` | Two tables, immutable domain object — plain SQL is clearer than JPA |
-| Tests | JUnit 5, AssertJ, Testcontainers, MockMvc, (optional) jqwik | Preferred stack; behaviour preservation proof |
+| Tests | JUnit 6 (Jupiter, managed by Spring Boot), AssertJ, Testcontainers, MockMvc | Preferred stack; behaviour preservation proof |
 | Architecture | Hexagonal, multi-module Maven | Boundaries enforced by the compiler, visible in the project tree |
 
 ## Module layout
@@ -47,7 +69,7 @@ module is not justified for two use cases.
 ## Working agreement
 
 - **Atomic commits** — one logical change per commit, tests green after every commit.
-- **Branch + PR per phase** (or sub-phase) inside the fork; PRs are the unit of AI review.
+- **Branch + PR per group of phases** (see PR plan) inside the fork; PRs are the unit of AI review.
 - Commit messages: Conventional Commits (`feat:`, `refactor:`, `test:`, `docs:`, `build:`, `chore:`).
 
 ## AI cross-review workflow
@@ -55,8 +77,7 @@ module is not justified for two use cases.
 Two agents: **Claude Code** and **Codex**. Shared rules live in `AGENTS.md`
 (Codex reads it natively; `CLAUDE.md` imports it), so both work from identical context.
 
-1. **Author alternates per PR.** Odd PRs: Claude Code writes, Codex reviews.
-   Even PRs: Codex writes, Claude Code reviews.
+1. **Author alternates per PR** (see PR plan): the agent that did not write the code reviews it.
 2. **One shared review prompt** — `docs/ai/prompts/review.md` — used verbatim by both tools,
    always against the same input (`git diff main...<branch>` + `AGENTS.md`).
    The prompt requires a fixed output format (one finding per row: severity, category,
@@ -65,8 +86,8 @@ Two agents: **Claude Code** and **Codex**. Shared rules live in `AGENTS.md`
    `valid` / `partially valid` / `false positive` / `duplicate` / `won't fix` (with reason).
 4. **Log everything** in `docs/ai/review-log.md`: PR, author, reviewer, finding, verdict,
    action taken (commit SHA or reason for rejection).
-5. **Calibration rounds (optional):** on 2–3 PRs both agents review the same diff
-   independently (blind), to compare them on identical input.
+5. **Calibration:** PR 1 and the final review are done by both agents independently (blind),
+   to compare them on identical input.
 6. **Final comparison** in `docs/AI.md`: findings per tool, precision (valid / total),
    severity mix, unique catches, false positives, qualitative notes, plus an honest summary
    of which parts of the solution were AI-assisted and why.
@@ -89,8 +110,7 @@ Notable prompts are stored in `docs/ai/prompts/`.
 5. Characterization tests for `updateBalance` (parameterized table): day boundaries 30/31, 45/46,
    365/366; unknown plan type and letter case; HALF_UP rounding edge cases; large balances;
    multiple deposits in one call.
-6. Optional: property-based test (jqwik) comparing the legacy and refactored implementations
-   on random input.
+6. Remove the placeholder test (`assertThat(1).isEqualTo(1)`) — it is replaced, not kept.
 
 ### Phase 2 — Multi-module restructure
 7. `git mv` existing code into `time-deposit-domain` (package `org.ikigaidigital` unchanged,
@@ -143,8 +163,6 @@ Notable prompts are stored in `docs/ai/prompts/`.
 - **Sealed interfaces**: deliberately *not* used for `InterestPolicy` — it would contradict the
   extensibility requirement (documented in code).
 - **Sequenced collections** (`getFirst()`) in tests.
-- **Virtual threads** (`spring.threads.virtual.enabled=true`): negligible benefit at this load;
-  enabled with a README note on when they matter.
 
 ## Assumptions to document (in code comments and README)
 
