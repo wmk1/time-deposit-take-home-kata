@@ -1,0 +1,8 @@
+# Line endings: LF in the repository, native line endings in the working tree.
+* text=auto
+
+# Scripts that must keep a specific line ending on every platform
+*.sh   text eol=lf
+mvnw   text eol=lf
+*.cmd  text eol=crlf
+*.bat  text eol=crlf
