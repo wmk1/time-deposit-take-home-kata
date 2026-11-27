@@ -13,7 +13,8 @@ implementations — the requirements are met by a single implementation.
   in the review prompt.
 - An accepted solution is followed by a 1-hour live coding session that extends it with new
   requirements: the design must be easy to change, and every line must be understood by the developer.
-- The brief asks for Java >= 17; this solution targets Java 21 (prerequisite stated in README).
+- The recruiter's instructions ask for Java >= 17 (the README itself names no version); this solution
+  targets Java 21, and the JDK 21+ prerequisite will be stated in the README (Phase 8).
 
 ### PR plan
 
@@ -79,11 +80,11 @@ Two agents: **Claude Code** and **Codex**. Shared rules live in `AGENTS.md`
 
 1. **Author alternates per PR** (see PR plan): the agent that did not write the code reviews it.
 2. **One shared review prompt** — `docs/ai/prompts/review.md` — used verbatim by both tools,
-   always against the same input (`git diff main...<branch>` + `AGENTS.md`).
+   always against the same input, as defined in the prompt itself.
    The prompt requires a fixed output format (one finding per row: severity, category,
    file:line, problem, suggested fix) so findings can be pasted straight into the log.
 3. **Human triage.** Every finding is judged by the developer:
-   `valid` / `partially valid` / `false positive` / `duplicate` / `won't fix` (with reason).
+   `valid` / `partial` / `false positive` / `duplicate` / `won't fix` (with reason).
 4. **Log everything** in `docs/ai/review-log.md`: PR, author, reviewer, finding, verdict,
    action taken (commit SHA or reason for rejection).
 5. **Calibration:** PR 1 and the final review are done by both agents independently (blind),

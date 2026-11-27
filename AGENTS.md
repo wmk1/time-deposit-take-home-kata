@@ -71,7 +71,7 @@ AI-generated leftovers are the second most common rejection reason. Before finis
 
 ## Git workflow
 
-- One branch + PR per plan phase, inside the fork `wmk1/time-deposit-take-home-kata`.
+- One branch + PR per PR group from the "PR plan" in `docs/PLAN.md`, inside the fork `wmk1/time-deposit-take-home-kata`.
   **Never** open PRs against `ikigai-digital/*`.
 - Atomic commits, Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `build:`, `chore:`).
   Tests must pass after every commit.
