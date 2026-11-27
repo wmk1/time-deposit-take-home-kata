@@ -89,10 +89,14 @@ if (-not (Test-Path -Path $MAVEN_M2_PATH)) {
 }
 
 $MAVEN_WRAPPER_DISTS = $null
-if ((Get-Item $MAVEN_M2_PATH).Target[0] -eq $null) {
-  $MAVEN_WRAPPER_DISTS = "$MAVEN_M2_PATH/wrapper/dists"
+# Local patch of maven-wrapper 3.3.4: the original indexed (Get-Item $MAVEN_M2_PATH).Target[0]
+# without a null check and failed when Get-Item returned no item or no Target (hidden .m2 folder,
+# sandboxed shells, Windows PowerShell 5.1). Includes the unreleased upstream fix apache/maven-wrapper@7443d4e (-Force).
+$MAVEN_M2_ITEM = Get-Item -Path $MAVEN_M2_PATH -Force -ErrorAction SilentlyContinue
+if ($MAVEN_M2_ITEM -and $MAVEN_M2_ITEM.Target -and $MAVEN_M2_ITEM.Target[0]) {
+  $MAVEN_WRAPPER_DISTS = $MAVEN_M2_ITEM.Target[0] + "/wrapper/dists"
 } else {
-  $MAVEN_WRAPPER_DISTS = (Get-Item $MAVEN_M2_PATH).Target[0] + "/wrapper/dists"
+  $MAVEN_WRAPPER_DISTS = "$MAVEN_M2_PATH/wrapper/dists"
 }
 
 $MAVEN_HOME_PARENT = "$MAVEN_WRAPPER_DISTS/$distributionUrlNameMain"
