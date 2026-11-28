@@ -4,9 +4,9 @@
 
 | Tool | Version / model | Role |
 |---|---|---|
-| Claude Code | Claude Opus 5.5, high effort | Author of PR 2; reviewer in the final review |
+| Claude Code | Claude Opus 5.5, high effort | Author of PR 2 |
 | Codex | GPT-6.2-Sol (default and xhigh reasoning) | Author of PR 3; reviewer of PR 1, PR 2 and the final review |
-| Claude (chat, agent session) | Claude Opus 5.5 | Analysis of the kata, plan, harness (PR 1), implementation prompts, documentation (PR 4); separate new chat sessions reviewed PR 1 and PR 3 |
+| Claude (chat, agent session) | Claude Opus 5.5 | Analysis of the kata, plan, harness (PR 1), implementation prompts, documentation (PR 4); separate new chat sessions reviewed PR 1, PR 3 and the final review and wrote the final-review fixes |
 
 ## Setup (reproducible)
 
@@ -71,7 +71,7 @@ human stayed responsible for what the brief says and for accepting the result.
 | 1 | Plan, harness, build upgrade (Java 21, Spring Boot 4.1, Maven Wrapper) | Drafted by Claude (chat); reviewed by Codex and a new Claude chat | Decisions (Java 21, multi-module hexagon, cross-review workflow), verdicts, commits |
 | 2 | Characterization tests, domain module, `InterestPolicy` refactoring | Written by Claude Code; reviewed by Codex (xhigh) | Spot-check that the characterization tests were not changed after their commit and that their arithmetic is right; decision on null plan types |
 | 3 | Ports, PostgreSQL adapter, REST API, application | Written by Codex; reviewed by a new Claude chat | Decisions: 204 for the update, one transaction, demo data only for local runs; manual test in Swagger UI |
-| 4 | README, this document, final review | Drafted by Claude (chat); final review by Codex and Claude Code | Content decisions, verdicts on the final review |
+| 4 | README, this document, final review and its fixes | Drafted by Claude (chat); final review by Codex and a new Claude chat; fixes by a new Claude chat | Manual test of the application on Windows (found a README bug no AI caught), verdicts, ran the build the fixing agent could not run |
 
 ## Claude vs Codex - comparison
 
@@ -100,6 +100,10 @@ All reviews before the final review:
   (logged in `docs/ai/review-log.md`, fixed in the README).
 - **Suggestions need review too:** one Codex fix did not work in PowerShell, and several findings were rejected
   with reasons (`won't fix`), e.g. history rewrites or premature optimisation.
+
+Final review of the whole solution (blind, both reviewers): Codex 6 findings (3 valid, 2 partial, 1 won't fix),
+Claude 7 findings (all valid). Codex found the cent-precision limit and the profile leak into the tests; Claude found
+the Flyway version clash of the demo seed. They overlapped on one finding only.
 
 PR 1 calibration in detail (same commit, blind, separate sessions):
 
