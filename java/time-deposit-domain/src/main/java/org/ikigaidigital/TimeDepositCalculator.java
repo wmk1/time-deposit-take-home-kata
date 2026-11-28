@@ -6,8 +6,20 @@ import java.util.List;
 
 /** Adds one month of interest to every deposit; the interest rule of each plan is an {@link InterestPolicy}. */
 public class TimeDepositCalculator {
-    private final List<InterestPolicy> policies =
-            List.of(new BasicInterestPolicy(), new StudentInterestPolicy(), new PremiumInterestPolicy());
+    private final List<InterestPolicy> policies;
+
+    /** Calculator with the policies of the three existing plans: basic, student and premium. */
+    public TimeDepositCalculator() {
+        this(List.of(new BasicInterestPolicy(), new StudentInterestPolicy(), new PremiumInterestPolicy()));
+    }
+
+    /**
+     * Calculator with exactly the given policies. A new plan comes with its own policy, and no existing
+     * class has to change. A deposit whose plan type no policy supports gets no interest.
+     */
+    public TimeDepositCalculator(List<InterestPolicy> policies) {
+        this.policies = List.copyOf(policies);
+    }
 
     public void updateBalance(List<TimeDeposit> deposits) {
         for (TimeDeposit deposit : deposits) {
