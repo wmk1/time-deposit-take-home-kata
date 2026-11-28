@@ -27,6 +27,7 @@
     -->
     <modules>
         <module>time-deposit-domain</module>
+        <module>time-deposit-adapter-persistence</module>
     </modules>
 
     <properties>
