@@ -69,4 +69,17 @@ class CustomInterestPolicyTest {
         // flat 0.125 -> 0.13; the default basic policy alone would add 1200 * 0.01 / 12 = 1.00
         assertThat(deposit.getBalance()).isEqualTo(1200.13);
     }
+
+    @Test
+    @DisplayName("the first matching policy wins even when its interest is 0")
+    void appliesTheFirstMatchingPolicyEvenWhenItReturnsZero() {
+        TimeDepositCalculator zeroBeforeBasic = new TimeDepositCalculator(
+                List.of(new FlatInterestPolicy("basic", 0.0), new BasicInterestPolicy()));
+        TimeDeposit deposit = new TimeDeposit(1, "basic", 1200.00, 100);
+
+        zeroBeforeBasic.updateBalance(List.of(deposit));
+
+        // first policy: 0.00; the second (basic) policy would add 1200 * 0.01 / 12 = 1.00 and is not used
+        assertThat(deposit.getBalance()).isEqualTo(1200.00);
+    }
 }
