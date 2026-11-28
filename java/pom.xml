@@ -28,6 +28,7 @@
     <modules>
         <module>time-deposit-domain</module>
         <module>time-deposit-adapter-persistence</module>
+        <module>time-deposit-adapter-rest</module>
     </modules>
 
     <properties>
