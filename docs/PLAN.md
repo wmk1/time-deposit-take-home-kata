@@ -149,9 +149,9 @@ Notable prompts are stored in `docs/ai/prompts/`.
 ### Phase 7 — Application
 21. `time-deposit-app`: Spring Boot main, default calculator wiring, and a transaction around
     each balance update.
-22. `java/compose.yaml` starts PostgreSQL for local runs. The `local` profile also runs Flyway
-    `V2` from `time-deposit-app/src/main/resources/db/demo` to seed plan types, day boundaries, and
-    withdrawals.
+22. `java/compose.yaml` starts PostgreSQL for local runs. The `local` profile also runs the Flyway
+    `afterMigrate` callback from `time-deposit-app/src/main/resources/db/demo`, which inserts demo plan
+    types, day boundaries, and withdrawals only when they do not exist yet.
 23. E2E test on Testcontainers: seed → POST → GET → assert balances.
 24. E2E test asserting the published OpenAPI contract exposes exactly two operations.
 
@@ -162,12 +162,12 @@ Notable prompts are stored in `docs/ai/prompts/`.
 
 ## Java 21 features — where they fit
 
-- **Records**: `Withdrawal`, read model, DB row mapping. `TimeDeposit` stays a class —
+- **Records** are used: `Withdrawal`, read model, DB row mapping. `TimeDeposit` stays a class —
   turning it into a record would rename accessors and break its API.
-- **Pattern matching for `switch`**: plan-type and error mapping.
 - **Sealed interfaces**: deliberately *not* used for `InterestPolicy` — it would contradict the
   extensibility requirement (documented in code).
-- **Sequenced collections** (`getFirst()`) in tests.
+- **Pattern matching for `switch`** and **sequenced collections** (`getFirst()`) were not needed, so they
+  were not added (no code for its own sake).
 
 ## Assumptions to document (in code comments and README)
 
