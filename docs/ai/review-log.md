@@ -24,6 +24,7 @@ with the columns ID, Severity, Category, Location, Finding, Verdict, Action.
 | 1 | 2 | Claude (chat) | Codex, GPT-6.2-Sol, default | 3 | 3 | 0 | 0 | 0 | 0 |
 | 1 | 2 | Claude (chat) | Claude (chat, new session), Claude Opus 5.5 | 11 | 7 | 2 | 0 | 0 | 2 |
 | 1 | 3 | Claude (chat) | Codex, GPT-6.2-Sol, xhigh | 7 | 6 | 1 | 0 | 0 | 0 |
+| 2 | 1 | Claude Code | Codex, GPT-6.2-Sol, xhigh | 3 | 2 | 0 | 0 | 0 | 1 |
 
 ---
 
@@ -93,3 +94,30 @@ Experiment: only the reasoning effort changed. The model labelled itself "GPT-6"
 - Only Codex found functional defects (Windows wrapper, hook logic) - it ran the wrapper and the hook logic.
   Claude found more process and documentation inconsistencies and the encoding issue.
 - Claude could not run the tests in its environment; Codex did.
+
+## PR 2 - Phases 1-3: characterization tests, multi-module build, calculator refactoring
+
+- Plan phase / steps: Phases 1-3, steps 5-11 (prompt: `docs/ai/prompts/pr2-phases-1-3.md`)
+- Author: Claude Code
+- Review mode: regular (one reviewer)
+- Date: 2026-11-28
+
+Before the review the developer, with Claude (chat), spot-checked the riskiest part: the characterization
+test file had not changed since its commit (only moved by `git mv`), and the arithmetic in its comments was
+recomputed independently. The null plan type change was noticed there, but not passed to the reviewer, so
+the review stayed blind.
+
+### Run 1 - Codex (GPT-6.2-Sol, xhigh reasoning)
+
+The model again labelled itself "GPT-6" in the report header.
+
+| ID | Severity | Category | Location | Finding (short) | Verdict | Action |
+|---|---|---|---|---|---|---|
+| PR2-X1-1 | blocker | behaviour preservation | `TimeDepositCalculator.java:38` | A null plan type used to throw `NullPointerException` after day 30 and abort the batch; now it gets no interest and later deposits are still updated | won't fix | Developer's decision (option A): null is invalid data, excluded by the `NOT NULL` column; reproducing an accidental NPE would carry a legacy defect into the new design. Documented in `AnnualRateInterestPolicy`, pinned by `InterestPolicyTest`, listed in the README assumptions |
+| PR2-X1-2 | minor | tests | `TimeDepositCalculatorTest.java:72` | No negative balance case: skipping interest on negative balances would pass the suite | valid | `7b9e076` |
+| PR2-X1-3 | minor | tests | `CustomInterestPolicyTest.java:60` | Both matching policies return positive interest, so "first non-zero wins" would also pass | valid | `8debe42` |
+
+Notes: the fix for PR2-X1-2 adds a test to the characterization test file after its commit. Existing rows are
+untouched; the new test pins original behaviour, so it was added on purpose as a review fix.
+Codex found the null plan type issue on its own and described it more precisely than the pre-check
+(the aborted batch).
