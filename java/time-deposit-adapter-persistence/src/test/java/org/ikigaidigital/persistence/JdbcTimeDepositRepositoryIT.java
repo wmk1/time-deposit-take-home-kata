@@ -1,19 +1,32 @@
 package org.ikigaidigital.persistence;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
 import org.flywaydb.core.Flyway;
 import org.ikigaidigital.TimeDeposit;
+import org.ikigaidigital.TimeDepositCalculator;
 import org.ikigaidigital.Withdrawal;
+import org.ikigaidigital.service.UpdateAllBalancesService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
+import org.springframework.jdbc.support.JdbcTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -23,11 +36,12 @@ class JdbcTimeDepositRepositoryIT {
     @Container
     private static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
 
+    private static DriverManagerDataSource dataSource;
     private static JdbcClient jdbc;
 
     @BeforeAll
     static void migrate() {
-        var dataSource = new DriverManagerDataSource(
+        dataSource = new DriverManagerDataSource(
                 postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
         Flyway.configure().dataSource(dataSource).load().migrate();
         jdbc = JdbcClient.create(dataSource);
@@ -76,5 +90,64 @@ class JdbcTimeDepositRepositoryIT {
                         rs.getInt("days"), rs.getBigDecimal("balance"))).list())
                 .containsExactly(tuple(1, "basic", 30, new BigDecimal("1001.13")),
                         tuple(2, "student", 365, new BigDecimal("-20.12")));
+    }
+
+    @Test
+    void serializesBalanceUpdatesBehindTheLockedRead() throws Exception {
+        var calculator = new TimeDepositCalculator();
+        var service = new UpdateAllBalancesService(new JdbcTimeDepositRepository(jdbc), calculator);
+        var transaction = new TransactionTemplate(new JdbcTransactionManager(dataSource));
+        transaction.setTimeout(15);
+        var updaterPid = new CompletableFuture<Integer>();
+
+        try (var executor = Executors.newSingleThreadExecutor(); var connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            var lockingJdbc = JdbcClient.create(new SingleConnectionDataSource(connection, true));
+            var lockingRepository = new JdbcTimeDepositRepository(lockingJdbc);
+            var lockedDeposits = lockingRepository.findAllForBalanceUpdate();
+            int lockingPid = lockingJdbc.sql("SELECT pg_backend_pid()").query(Integer.class).single();
+
+            var secondUpdate = executor.submit(() -> transaction.executeWithoutResult(status -> {
+                updaterPid.complete(jdbc.sql("SELECT pg_backend_pid()").query(Integer.class).single());
+                service.updateAllBalances();
+            }));
+
+            awaitUpdateBlockedBy(lockingJdbc, updaterPid.get(5, SECONDS), lockingPid, secondUpdate);
+            assertThatExceptionOfType(TimeoutException.class)
+                    .isThrownBy(() -> secondUpdate.get(200, MILLISECONDS));
+
+            calculator.updateBalance(lockedDeposits);
+            lockingRepository.saveBalances(lockedDeposits);
+            connection.commit();
+            secondUpdate.get(5, SECONDS);
+        }
+
+        // The student earns 1200.25 * 0.03 / 12 = 3.000625, rounded to 3.00.
+        // The next month earns 1203.25 * 0.03 / 12 = 3.008125, rounded to 3.01.
+        assertThat(jdbc.sql("""
+                        SELECT balance FROM "timeDeposits" WHERE id = 2
+                        """).query(BigDecimal.class).single())
+                .isEqualTo(new BigDecimal("1206.26"));
+    }
+
+    private static void awaitUpdateBlockedBy(JdbcClient observer, int waiterPid, int blockerPid, Future<?> update)
+            throws InterruptedException, ExecutionException {
+        // A running worker may still be opening its connection or preparing SQL. Check the database lock wait.
+        var blockedBy = observer.sql("SELECT :blocker = ANY (pg_blocking_pids(:waiter))")
+                .param("blocker", blockerPid)
+                .param("waiter", waiterPid);
+        long deadline = System.nanoTime() + SECONDS.toNanos(5);
+        do {
+            if (blockedBy.query(Boolean.class).single()) {
+                return;
+            }
+            try {
+                update.get(25, MILLISECONDS);
+            } catch (TimeoutException stillRunning) {
+                continue;
+            }
+            throw new AssertionError("The second balance update finished while the first transaction was open");
+        } while (System.nanoTime() < deadline);
+        throw new AssertionError("PostgreSQL did not report the second balance update waiting on the first");
     }
 }
