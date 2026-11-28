@@ -1,10 +1,5 @@
 package org.ikigaidigital.app;
 
-import java.util.List;
-import org.ikigaidigital.BasicInterestPolicy;
-import org.ikigaidigital.InterestPolicy;
-import org.ikigaidigital.PremiumInterestPolicy;
-import org.ikigaidigital.StudentInterestPolicy;
 import org.ikigaidigital.TimeDepositCalculator;
 import org.ikigaidigital.persistence.JdbcTimeDepositRepository;
 import org.ikigaidigital.port.in.GetAllTimeDepositsUseCase;
@@ -22,23 +17,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Configuration(proxyBeanMethods = false)
 class TimeDepositConfiguration {
     @Bean
-    BasicInterestPolicy basicInterestPolicy() {
-        return new BasicInterestPolicy();
-    }
-
-    @Bean
-    StudentInterestPolicy studentInterestPolicy() {
-        return new StudentInterestPolicy();
-    }
-
-    @Bean
-    PremiumInterestPolicy premiumInterestPolicy() {
-        return new PremiumInterestPolicy();
-    }
-
-    @Bean
-    TimeDepositCalculator timeDepositCalculator(List<InterestPolicy> policies) {
-        return new TimeDepositCalculator(policies);
+    TimeDepositCalculator timeDepositCalculator() {
+        return new TimeDepositCalculator();
     }
 
     @Bean
