@@ -25,7 +25,10 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import tools.jackson.databind.json.JsonMapper;
 
 @Testcontainers
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// SPRING_PROFILES_ACTIVE=local, left set in the shell after a local run, would add the demo data location;
+// test properties take precedence over profile files, so the test always runs only the schema migrations.
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "spring.flyway.locations=classpath:db/migration")
 class TimeDepositApplicationIT {
     @Container
     private static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
@@ -96,12 +99,29 @@ class TimeDepositApplicationIT {
     }
 
     @Test
+    void keepsTheLargestSupportedBalanceExactlyThroughTheDoubleDomain() throws Exception {
+        // 9999999999999.99 is the largest NUMERIC(15,2) value (15 significant digits). Basic on day 30 earns
+        // no interest, so the balance only makes the round trip through the double of TimeDeposit.
+        jdbc.sql("""
+                INSERT INTO "timeDeposits" (id, "planType", days, balance)
+                VALUES (1, 'basic', 30, 9999999999999.99)
+                """).update();
+
+        assertThat(updateBalances().statusCode()).isEqualTo(204);
+        assertThat(jdbc.sql("""
+                        SELECT balance FROM "timeDeposits" WHERE id = 1
+                        """).query(BigDecimal.class).single())
+                .isEqualTo(new BigDecimal("9999999999999.99"));
+    }
+
+    @Test
     void rollsBackTheFirstWriteWhenTheSecondWriteFails() throws Exception {
         jdbc.sql("""
                 INSERT INTO "timeDeposits" (id, "planType", days, balance)
                 VALUES (1, 'basic', 31, 1200.00), (2, 'basic', 31, 1200.00)
                 """).update();
         // Both balances would become 1201.00. Reject deposit 2 to fail after deposit 1 has been written.
+        // This relies on findAllForBalanceUpdate ordering by id, so deposit 1 is written before deposit 2 is rejected.
         jdbc.sql("""
                 ALTER TABLE "timeDeposits" ADD CONSTRAINT reject_second_update
                 CHECK (id <> 2 OR balance <= 1200.00)

@@ -1,14 +1,12 @@
 # AI-Assisted Development
 
-> Work in progress — this document is updated together with each phase of `docs/PLAN.md`.
-
 ## Tools
 
 | Tool | Version / model | Role |
 |---|---|---|
-| Claude Code | first used as author in PR 2 | Author and reviewer (alternating with Codex) |
-| Codex | GPT-6.2-Sol (default and xhigh reasoning) | Author and reviewer (alternating with Claude Code) |
-| Claude (chat, agent session) | Claude Opus 5.5 | Initial analysis of the kata, implementation plan, bootstrap of this harness (Phase 0) |
+| Claude Code | Claude Opus 5.5, high effort | Author of PR 2 |
+| Codex | GPT-6.2-Sol (default and xhigh reasoning) | Author of PR 3; reviewer of PR 1, PR 2 and the final review |
+| Claude (chat, agent session) | Claude Opus 5.5 | Analysis of the kata, plan, harness (PR 1), implementation prompts, documentation (PR 4); separate new chat sessions reviewed PR 1, PR 3 and the final review and wrote the final-review fixes |
 
 ## Setup (reproducible)
 
@@ -50,23 +48,64 @@ Known limitations of the setup:
 
 ## Workflow
 
-Described in `docs/PLAN.md`, section "AI cross-review workflow": the author agent alternates per PR,
-the other agent reviews with the shared prompt, the developer judges every finding and logs it.
+Described in `docs/PLAN.md`, section "AI cross-review workflow":
+
+1. Each PR has one author agent, working from a committed implementation prompt
+   (`docs/ai/prompts/pr2-phases-1-3.md`, `docs/ai/prompts/pr3-phases-4-7.md`).
+2. A different agent reviews it with the shared prompt `docs/ai/prompts/review.md`.
+3. The developer judges every finding (`valid`, `partial`, `won't fix`, ...) and the author fixes the accepted ones
+   in separate commits; everything is recorded in `docs/ai/review-log.md`.
+
+The Claude Code `/review-pr` skill is only available in Claude Code; in the Claude chat app the reviewer reads
+`docs/ai/prompts/review.md` from the repository directly.
 
 ## What was AI-assisted and why
 
-_Filled in per phase._
+Practically all code, tests and documentation were written by AI agents. The developer made the decisions,
+judged every review finding, checked the riskiest parts and tested the application by hand. AI was used for
+generation, testing and refactoring because it is fast at producing code and tests from a precise brief; the
+human stayed responsible for what the brief says and for accepting the result.
 
-| Phase | What | AI involvement | Human involvement |
+| PR | What | AI involvement | Human involvement |
 |---|---|---|---|
-| 0 | Plan, harness, build upgrade | Drafted by Claude (chat) | Decisions (Java 21, Spring Boot 4.1, multi-module, review workflow), review, commits |
-| 0 | Fixes after the PR 1 reviews | Findings by Codex and Claude, fixes drafted by Claude (chat) | Verdict on every finding, rejected the history rewrite, commits |
+| 1 | Plan, harness, build upgrade (Java 21, Spring Boot 4.1, Maven Wrapper) | Drafted by Claude (chat); reviewed by Codex and a new Claude chat | Decisions (Java 21, multi-module hexagon, cross-review workflow), verdicts, commits |
+| 2 | Characterization tests, domain module, `InterestPolicy` refactoring | Written by Claude Code; reviewed by Codex (xhigh) | Spot-check that the characterization tests were not changed after their commit and that their arithmetic is right; decision on null plan types |
+| 3 | Ports, PostgreSQL adapter, REST API, application | Written by Codex; reviewed by a new Claude chat | Decisions: 204 for the update, one transaction, demo data only for local runs; manual test in Swagger UI |
+| 4 | README, this document, final review and its fixes | Drafted by Claude (chat); final review by Codex and a new Claude chat; fixes by a new Claude chat | Manual test of the application on Windows (found a README bug no AI caught), verdicts, ran the build the fixing agent could not run |
 
-## Claude Code vs Codex - comparison
+## Claude vs Codex - comparison
 
-The final comparison is written after PR 4, based on `docs/ai/review-log.md`.
+Based on `docs/ai/review-log.md`. The sample is small (one kata, a few PRs), and the environment mattered as much
+as the model: the Codex reviewer could build and run the code, while the Claude chat reviewer had only JDK 11
+and no Maven Central access, so it could only read the code.
 
-Observations from the PR 1 calibration (same commit, blind, separate sessions):
+All reviews before the final review:
+
+| Reviewer | Reviews | Findings | Valid | Partial | Won't fix |
+|---|---|---|---|---|---|
+| Codex (GPT-6.2-Sol) | 4 (PR 1 x3, PR 2) | 16 | 14 | 1 | 1 |
+| Claude (chat, Claude Opus 5.5) | 2 (PR 1, PR 3) | 21 | 14 | 2 | 5 |
+
+- **Codex as a reviewer** reported fewer findings with more functional weight, usually verified by running code:
+  the Windows Maven Wrapper bug, two gaps in the Stop hook, and the only `blocker` - a behaviour change for
+  `null` plan types.
+- **Claude as a reviewer** reported more findings, strongest on consistency and AI artifacts: an unused test
+  profile, a policy set defined twice, an untested concurrency claim, the mangled prompt encoding.
+- **As authors**, Claude Code (PR 2) left two test gaps and no dead code; Codex (PR 3) left two AI artifacts and an
+  untested claim. Both were caught by the other tool's review, which is the point of the cross-review.
+- **Reasoning effort matters:** Codex at xhigh found everything it found at default effort, plus four more issues,
+  and only at xhigh noticed that its own input was corrupted.
+- **A human test still found something:** running the application by hand on Windows showed that the
+  `--spring.profiles.active=local` argument does not survive Windows PowerShell; no AI reviewer had caught it
+  (logged in `docs/ai/review-log.md`, fixed in the README).
+- **Suggestions need review too:** one Codex fix did not work in PowerShell, and several findings were rejected
+  with reasons (`won't fix`), e.g. history rewrites or premature optimisation.
+
+Final review of the whole solution (blind, both reviewers): Codex 6 findings (3 valid, 2 partial, 1 won't fix),
+Claude 7 findings (all valid). Codex found the cent-precision limit and the profile leak into the tests; Claude found
+the Flyway version clash of the demo seed. They overlapped on one finding only.
+
+PR 1 calibration in detail (same commit, blind, separate sessions):
 
 | Reviewer | Findings | Valid | Partial | Won't fix | Character of findings |
 |---|---|---|---|---|---|

@@ -26,6 +26,8 @@ with the columns ID, Severity, Category, Location, Finding, Verdict, Action.
 | 1 | 3 | Claude (chat) | Codex, GPT-6.2-Sol, xhigh | 7 | 6 | 1 | 0 | 0 | 0 |
 | 2 | 1 | Claude Code | Codex, GPT-6.2-Sol, xhigh | 3 | 2 | 0 | 0 | 0 | 1 |
 | 3 | 1 | Codex | Claude (chat, new session), Claude Opus 5.5 | 10 | 7 | 0 | 0 | 0 | 3 |
+| 4 (final) | 1 | whole solution | Codex, GPT-6.2-Sol, xhigh | 6 | 3 | 2 | 0 | 0 | 1 |
+| 4 (final) | 1 | whole solution | Claude (chat, new session), Claude Opus 5.5 | 7 | 7 | 0 | 0 | 0 | 0 |
 
 ---
 
@@ -152,3 +154,50 @@ repository and followed it. It could not run the tests (JDK 11 only, no Maven Ce
 Notes: editing V1 changes its Flyway checksum; a local database created before `36e2647` has to be recreated
 (`docker compose down -v`). The reviewer found two real AI artifacts (an unused test profile, duplicated wiring)
 that the author's own self-check missed.
+
+## Manual testing by the developer (PR 4)
+
+Not an AI review: the developer ran the application by hand on Windows, following the README written in PR 3.
+
+| ID | Severity | Category | Location | Finding (short) | Verdict | Action |
+|---|---|---|---|---|---|---|
+| PR4-H-1 | major | documentation | `README.md` (run instructions) | In Windows PowerShell the documented `java -jar ... --spring.profiles.active=local` started the application without the `local` profile ("Failed to configure a DataSource") | valid | README now sets `SPRING_PROFILES_ACTIVE` for PowerShell and avoids `&&`, which Windows PowerShell 5.1 does not support (README commit in PR 4) |
+
+Notes: none of the AI reviewers caught this; it only shows up when the instructions are followed on the target platform.
+
+## PR 4 - Final review of the whole solution
+
+- Scope: `git diff 96c4a09...docs/final-documentation` (everything since the start of the work)
+- Review mode: calibration (blind, both reviewers in separate sessions)
+- Fixes: written by a new Claude chat session (Claude Opus 5.5), one commit per finding. Its environment had
+  JDK 11 and no Docker, so it could not run the build; the developer ran `./mvnw verify` afterwards.
+- Date: 2026-11-28
+
+### Run 1 - Codex (GPT-6.2-Sol, xhigh reasoning)
+
+| ID | Severity | Category | Location | Finding (short) | Verdict | Action |
+|---|---|---|---|---|---|---|
+| PR4-X1-1 | blocker | behaviour preservation | `TimeDepositCalculator.java:38` | Null plan type no longer throws (same as PR2-X1-1) | won't fix | Decision from PR 2 stands; now also pinned at `updateBalance` level: `bf56ce5` |
+| PR4-X1-2 | major | correctness | `JdbcTimeDepositRepository.java:84` | `NUMERIC(19,2)` read as `double` loses cents from 10^15 on; at the column maximum the update fails | partial | Instead of carrying `BigDecimal` through the domain (would break the `TimeDeposit` API): `NUMERIC(15,2)`, the range a double keeps exact to the cent (checked on 2 million random values), plus an IT with the maximum balance: `40ff295` |
+| PR4-X1-3 | major | tests | `TimeDepositApplicationIT.java:138` | `SPRING_PROFILES_ACTIVE=local` left in the shell breaks `verify` | valid | Test forces the schema-only Flyway location: `ac53326`; README removes the variable after a local run: `be1d883` |
+| PR4-X1-4 | major | tests | `TimeDepositApplicationIT.java:110` | Rollback test could pass if the rejected row were written first | partial | The order is deterministic (`ORDER BY id`); the test now states that it relies on it: `b9c751c` |
+| PR4-X1-5 | minor | documentation | `README.md:49` | `/v3/api-docs` is generated at runtime, not the checked-in `openapi.yaml` | valid | `be1d883` |
+| PR4-X1-6 | nit | documentation | `README.md:118` | README calls `TimeDeposit` immutable | valid | `be1d883`, plan aligned in the log commit |
+
+### Run 1 - Claude (chat, new session; Claude Opus 5.5)
+
+Could not run the tests (JDK 11, no Maven Central access).
+
+| ID | Severity | Category | Location | Finding (short) | Verdict | Action |
+|---|---|---|---|---|---|---|
+| PR4-C1-1 | minor | documentation | `README.md:49` | Same as PR4-X1-5 | valid | `be1d883` |
+| PR4-C1-2 | minor | design | `db/demo/V2__seed_demo_deposits.sql:1` | Demo seed takes Flyway version 2; the next schema migration V2 would clash | valid | Seed is now an `afterMigrate` callback with `ON CONFLICT DO NOTHING`: `a4326ed`; checked by hand (local run) because no test runs the callback |
+| PR4-C1-3 | minor | tests | `TimeDepositCalculatorTest.java:54` | Null plan type decision tested only at policy level | valid | `bf56ce5` |
+| PR4-C1-4 | minor | documentation | `AGENTS.md:17` | Hard constraint 2 does not mention the null plan type exception | valid | `8f700b2` |
+| PR4-C1-5 | nit | dead code | `AGENTS.md:31` | Outdated "Until Phase 2" sentences | valid | `8f700b2` |
+| PR4-C1-6 | nit | documentation | `docs/PLAN.md:167` | Plan names Java 21 features that are not used | valid | `6af4d3e`, remaining lines aligned in the log commit |
+| PR4-C1-7 | nit | documentation | `README.md:52` | README shows 1201.00, JSON returns 1201 / 1201.0 | valid | `be1d883` |
+
+Notes: only Codex found the cent-precision limit and the profile leak into the tests (it ran the build with the
+`local` profile active); only Claude found the Flyway version clash of the demo seed, which would have surfaced
+during the live coding extension.

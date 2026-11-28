@@ -18,6 +18,8 @@ Implementation plan and current phase: `docs/PLAN.md` — always read it before 
    **bit-for-bit identical** — boundaries `days > 30`, student `days < 366`, premium `days > 45`;
    interest rounded HALF_UP via `new BigDecimal(double)` and added as `double`; unknown plan types
    get no interest. Characterization tests pin this; never change an expected value to make a test pass.
+   Accepted exception: a `null` plan type gets no interest (the original code threw a NullPointerException;
+   see README assumptions).
 3. Exactly **two** API operations: `GET /time-deposits`, `POST /time-deposits/balance-updates`.
 4. Ambiguities are resolved by explicit assumptions written in code comments (and listed in README).
 
@@ -28,7 +30,6 @@ Implementation plan and current phase: `docs/PLAN.md` — always read it before 
 - Adapters (`adapter-rest`, `adapter-persistence`) depend on the domain, never on each other.
 - `time-deposit-app` only wires things together (Spring Boot main, configuration).
 - REST is contract-first: edit `openapi.yaml`, never edit generated sources by hand.
-- Until Phase 2 of the plan the code is still a single module in `java/`.
 
 ## Commands (run from `java/`)
 
