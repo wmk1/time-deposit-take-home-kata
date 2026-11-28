@@ -96,6 +96,22 @@ class TimeDepositApplicationIT {
     }
 
     @Test
+    void keepsTheLargestSupportedBalanceExactlyThroughTheDoubleDomain() throws Exception {
+        // 9999999999999.99 is the largest NUMERIC(15,2) value (15 significant digits). Basic on day 30 earns
+        // no interest, so the balance only makes the round trip through the double of TimeDeposit.
+        jdbc.sql("""
+                INSERT INTO "timeDeposits" (id, "planType", days, balance)
+                VALUES (1, 'basic', 30, 9999999999999.99)
+                """).update();
+
+        assertThat(updateBalances().statusCode()).isEqualTo(204);
+        assertThat(jdbc.sql("""
+                        SELECT balance FROM "timeDeposits" WHERE id = 1
+                        """).query(BigDecimal.class).single())
+                .isEqualTo(new BigDecimal("9999999999999.99"));
+    }
+
+    @Test
     void rollsBackTheFirstWriteWhenTheSecondWriteFails() throws Exception {
         jdbc.sql("""
                 INSERT INTO "timeDeposits" (id, "planType", days, balance)
