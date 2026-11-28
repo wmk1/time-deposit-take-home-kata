@@ -11,3 +11,5 @@ CREATE TABLE withdrawals (
     amount NUMERIC(19,2) NOT NULL,
     date DATE NOT NULL
 );
+
+CREATE INDEX withdrawals_time_deposit_id_idx ON withdrawals ("timeDepositId");
