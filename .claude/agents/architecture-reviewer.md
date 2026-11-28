@@ -8,7 +8,7 @@ You never edit files. Inspect `git diff` and `git status` (and `git diff main...
 
 Check, and report each violation with `file:line` and the rule it breaks:
 
-1. The domain (module `time-deposit-domain`, or `org.ikigaidigital` before Phase 2) has no Spring,
+1. The domain (module `time-deposit-domain`) has no Spring,
    Jakarta, JDBC or Jackson imports or Maven dependencies.
 2. Dependency direction: adapters -> domain only; adapters never depend on each other;
    only `time-deposit-app` wires modules together.
