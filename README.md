@@ -34,6 +34,8 @@ docker compose up -d --wait
 .\mvnw.cmd package
 $env:SPRING_PROFILES_ACTIVE = "local"
 java -jar time-deposit-app/target/time-deposit-app-1.0-SNAPSHOT.jar
+# After stopping the application, clear the profile before running the tests:
+Remove-Item Env:SPRING_PROFILES_ACTIVE
 ```
 
 The `local` profile connects to the PostgreSQL from
@@ -46,7 +48,8 @@ To start again from the original demo data: stop the application, run `docker co
 
 ## Trigger the endpoints with Swagger
 
-The contract is `java/time-deposit-adapter-rest/src/main/openapi/openapi.yaml` (served at `/v3/api-docs`).
+The contract file is `java/time-deposit-adapter-rest/src/main/openapi/openapi.yaml`. `/v3/api-docs` is generated at
+runtime from the controller that implements the interface generated from that file.
 
 1. Open <http://localhost:8080/swagger-ui.html>.
 2. **GET /time-deposits** - *Try it out*, *Execute*. You get the 9 demo deposits (all with balance 1200.00)
@@ -65,6 +68,8 @@ The contract is `java/time-deposit-adapter-rest/src/main/openapi/openapi.yaml` (
 | 7 | premium | 45 | 1200.00 | premium interest starts after 45 days |
 | 8 | premium | 46 | 1205.00 | 1200 * 0.05 / 12 = 5.00 |
 | 9 | unknown | 46 | 1200.00 | unknown plan type: no interest |
+
+JSON shows balances as numbers, so 1201.00 appears as `1201` or `1201.0`, not `1201.00`.
 
 Every POST applies one more month of interest. The same calls with curl:
 
@@ -115,7 +120,7 @@ java/
   `balance * rate / 12`, both pinned by tests.
 - **Contract-first REST.** The OpenAPI file is the source of truth; the controller implements the generated
   interface. Swagger UI is served by springdoc.
-- **Plain SQL.** `JdbcClient` and Flyway; two tables do not justify JPA, and the immutable domain object maps
+- **Plain SQL.** `JdbcClient` and Flyway; two tables do not justify JPA, and the domain object maps
   easily by hand. Table and column names are exactly those of the assignment.
 - **Transactions.** The update of all balances runs in one transaction (all or nothing). The boundary is in the
   application module (`TransactionTemplate`), so the domain stays framework-free. The read for the update locks
@@ -132,14 +137,16 @@ The assignment leaves these points open; each is also explained in a code commen
   once a month (e.g. by a scheduler).
 - Withdrawals are historical records returned by GET; they do not affect interest.
 - The domain keeps `double` balances (the `TimeDeposit` API stays unchanged); the database stores
-  `NUMERIC(19,2)`, written with `BigDecimal.valueOf(balance).setScale(2, HALF_UP)`.
+  `NUMERIC(15,2)`, written with `BigDecimal.valueOf(balance).setScale(2, HALF_UP)`. Balances go up to
+  9,999,999,999,999.99: up to 15 significant digits a `double` keeps every cent exactly.
 - Plan type matching is case-sensitive (`"Basic"` gets no interest), as in the original code.
 - A `null` plan type gets no interest. The original code threw a `NullPointerException` after day 30 and
   aborted the whole batch; `null` is invalid data and is excluded by the `NOT NULL` column, and reproducing an
   accidental exception would carry a defect of the old code into the new design.
 - Negative balances get negative interest, exactly as in the original code.
 - Demo data lives in a separate Flyway location (`db/demo`) that only the `local` profile loads; tests and any
-  other environment start with an empty schema.
+  other environment start with an empty schema. It is an `afterMigrate` callback, not a versioned migration: it
+  inserts the demo rows only when they do not exist yet.
 - Swagger UI and `/v3/api-docs` are documentation of the two business operations, not additional endpoints;
   no actuator is included.
 
