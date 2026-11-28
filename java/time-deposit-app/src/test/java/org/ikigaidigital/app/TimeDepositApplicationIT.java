@@ -121,6 +121,7 @@ class TimeDepositApplicationIT {
                 VALUES (1, 'basic', 31, 1200.00), (2, 'basic', 31, 1200.00)
                 """).update();
         // Both balances would become 1201.00. Reject deposit 2 to fail after deposit 1 has been written.
+        // This relies on findAllForBalanceUpdate ordering by id, so deposit 1 is written before deposit 2 is rejected.
         jdbc.sql("""
                 ALTER TABLE "timeDeposits" ADD CONSTRAINT reject_second_update
                 CHECK (id <> 2 OR balance <= 1200.00)
