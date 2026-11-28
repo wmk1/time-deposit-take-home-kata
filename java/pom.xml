@@ -21,10 +21,7 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <!--
-      Adapter and application modules are added together with their first real content (PR 3);
-      an empty module would be dead code.
-    -->
+    <!-- Both adapters depend on the domain. The application assembles them. -->
     <modules>
         <module>time-deposit-domain</module>
         <module>time-deposit-adapter-persistence</module>
