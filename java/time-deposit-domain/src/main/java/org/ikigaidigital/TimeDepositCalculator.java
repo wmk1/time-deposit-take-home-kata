@@ -15,7 +15,9 @@ public class TimeDepositCalculator {
 
     /**
      * Calculator with exactly the given policies. A new plan comes with its own policy, and no existing
-     * class has to change. A deposit whose plan type no policy supports gets no interest.
+     * class has to change. Policies are tried in list order and only the first one that supports a
+     * deposit's plan type is applied, so a policy placed before a default one replaces it for that plan.
+     * A deposit whose plan type no policy supports gets no interest.
      */
     public TimeDepositCalculator(List<InterestPolicy> policies) {
         this.policies = List.copyOf(policies);
