@@ -59,6 +59,14 @@ class TimeDepositCalculatorTest {
         assertThat(balanceAfterUpdate(planType, 100, 1200.00)).isEqualTo(1200.00);
     }
 
+    @Test
+    @DisplayName("a null plan type gets no interest")
+    void paysNoInterestForNullPlanType() {
+        // The original code threw a NullPointerException here; documented decision, see README assumptions.
+        // Day 100 is inside the interest window of every known plan.
+        assertThat(balanceAfterUpdate(null, 100, 1200.00)).isEqualTo(1200.00);
+    }
+
     @ParameterizedTest(name = "{0} plan keeps a zero balance at zero")
     @DisplayName("a zero balance stays zero")
     @CsvSource({"basic", "student", "premium"})
