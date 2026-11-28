@@ -31,11 +31,11 @@ Only if time remains after PR 4: CI on GitHub Actions (JDK 21 and 25).
 
 | Area | Choice | Why |
 |---|---|---|
-| Language | Java 21 | LTS; records, pattern matching for `switch`, sequenced collections |
+| Language | Java 21 | Current LTS (the recruiter's minimum is Java 17); records for the read model |
 | Framework | Spring Boot 4.1 | Spring Boot 3.5 reached end of OSS support in June 2026 |
 | API contract | OpenAPI 3 (`openapi.yaml`), contract-first via `openapi-generator-maven-plugin` | Preferred stack; contract is the source of truth |
 | API docs / UI | springdoc-openapi 3.x (Swagger UI) | Matches Spring Boot 4 |
-| Persistence | PostgreSQL, Flyway, `JdbcClient` | Two tables, immutable domain object — plain SQL is clearer than JPA |
+| Persistence | PostgreSQL, Flyway, `JdbcClient` | Two tables and a hand-mapped domain object - plain SQL is clearer than JPA |
 | Tests | JUnit 6 (Jupiter, managed by Spring Boot), AssertJ, Testcontainers, MockMvc | Preferred stack; behaviour preservation proof |
 | Architecture | Hexagonal, multi-module Maven | Boundaries enforced by the compiler, visible in the project tree |
 
@@ -136,7 +136,7 @@ Notable prompts are stored in `docs/ai/prompts/`.
 
 ### Phase 5 — Persistence adapter
 15. Flyway `V1`: `timeDeposits` and `withdrawals` tables exactly as specified (quoted identifiers,
-    `balance NUMERIC(19,2)`).
+    `balance NUMERIC(15,2)` - the range a double keeps exact to the cent).
 16. `JdbcClient` adapter with SQL text blocks and a `FOR NO KEY UPDATE` read for balance updates.
 17. Integration tests on Testcontainers (PostgreSQL), including concurrent balance updates.
 
@@ -175,5 +175,5 @@ Notable prompts are stored in `docs/ai/prompts/`.
 - The balance update is **not idempotent** — each call applies one month of interest
   (intended to be triggered by a monthly scheduler).
 - Withdrawals do not affect interest calculation; they are returned by the GET endpoint only.
-- Balance is persisted as `NUMERIC(19,2)`; the domain keeps `Double` to avoid breaking `TimeDeposit`.
+- Balance is persisted as `NUMERIC(15,2)`; the domain keeps `Double` to avoid breaking `TimeDeposit`.
 - Swagger UI / `/v3/api-docs` are documentation, not business API endpoints; no actuator is added.
