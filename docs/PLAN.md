@@ -137,21 +137,23 @@ Notable prompts are stored in `docs/ai/prompts/`.
 ### Phase 5 — Persistence adapter
 15. Flyway `V1`: `timeDeposits` and `withdrawals` tables exactly as specified (quoted identifiers,
     `balance NUMERIC(19,2)`).
-16. Flyway `V2`: demo data covering every plan type and day boundary, plus withdrawals.
-17. `JdbcClient` adapter with SQL text blocks.
-18. Integration tests on Testcontainers (PostgreSQL).
+16. `JdbcClient` adapter with SQL text blocks and a `FOR NO KEY UPDATE` read for balance updates.
+17. Integration tests on Testcontainers (PostgreSQL), including concurrent balance updates.
 
 ### Phase 6 — REST adapter (contract-first)
-19. `openapi.yaml`: `GET /time-deposits`, `POST /time-deposits/balance-updates`; response schema
+18. `openapi.yaml`: `GET /time-deposits`, `POST /time-deposits/balance-updates`; response schema
     `id`, `planType`, `balance`, `days`, `withdrawals`.
-20. Generated API interfaces + DTOs; controller implements them; domain → DTO mapper.
-21. MockMvc controller tests.
+19. Generated API interfaces + DTOs; controller implements them; domain → DTO mapper.
+20. MockMvc controller tests.
 
 ### Phase 7 — Application
-22. `app` module: Spring Boot main, wiring configuration (policies as beans),
-    `docker-compose.yml` with PostgreSQL for local runs.
+21. `time-deposit-app`: Spring Boot main, default calculator wiring, and a transaction around
+    each balance update.
+22. `java/compose.yaml` starts PostgreSQL for local runs. The `local` profile also runs Flyway
+    `V2` from `time-deposit-app/src/main/resources/db/demo` to seed plan types, day boundaries, and
+    withdrawals.
 23. E2E test on Testcontainers: seed → POST → GET → assert balances.
-24. Test asserting the contract exposes exactly two operations.
+24. E2E test asserting the published OpenAPI contract exposes exactly two operations.
 
 ### Phase 8 — Documentation and final review
 25. README: how to run, how to trigger endpoints via Swagger UI, assumptions, why Java only.
