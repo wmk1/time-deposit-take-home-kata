@@ -72,6 +72,7 @@ human stayed responsible for what the brief says and for accepting the result.
 | 2 | Characterization tests, domain module, `InterestPolicy` refactoring | Written by Claude Code; reviewed by Codex (xhigh) | Spot-check that the characterization tests were not changed after their commit and that their arithmetic is right; decision on null plan types |
 | 3 | Ports, PostgreSQL adapter, REST API, application | Written by Codex; reviewed by a new Claude chat | Decisions: 204 for the update, one transaction, demo data only for local runs; manual test in Swagger UI |
 | 4 | README, this document, final review and its fixes | Drafted by Claude (chat); final review by Codex and a new Claude chat; fixes by a new Claude chat | Manual test of the application on Windows (found a README bug no AI caught), verdicts, ran the build the fixing agent could not run |
+| 4 | `docs/AUTHOR-NOTE.md` | Translated from Polish by AI, spelling and grammar only | Written entirely by the developer |
 
 ## Claude vs Codex - comparison
 

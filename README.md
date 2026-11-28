@@ -6,6 +6,7 @@ this file.
 - **Implementation:** Java 21, Spring Boot 4.1, PostgreSQL - everything lives in `java/`.
 - The `kotlin/`, `python/`, `c#/` and `typescript/` folders are the reference implementations from the
   assignment. One implementation meets the requirements, so they were deliberately left untouched.
+- **A note from the author:** [docs/AUTHOR-NOTE.md](docs/AUTHOR-NOTE.md) - how I approached the task, in my own words.
 - **AI-assisted development:** see [docs/AI.md](docs/AI.md) (tools, setup, what was AI-assisted) and
   [docs/ai/review-log.md](docs/ai/review-log.md) (every AI review finding with the developer's verdict).
 
