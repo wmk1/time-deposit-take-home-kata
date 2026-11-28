@@ -152,3 +152,13 @@ repository and followed it. It could not run the tests (JDK 11 only, no Maven Ce
 Notes: editing V1 changes its Flyway checksum; a local database created before `36e2647` has to be recreated
 (`docker compose down -v`). The reviewer found two real AI artifacts (an unused test profile, duplicated wiring)
 that the author's own self-check missed.
+
+## Manual testing by the developer (PR 4)
+
+Not an AI review: the developer ran the application by hand on Windows, following the README written in PR 3.
+
+| ID | Severity | Category | Location | Finding (short) | Verdict | Action |
+|---|---|---|---|---|---|---|
+| PR4-H-1 | major | documentation | `README.md` (run instructions) | In Windows PowerShell the documented `java -jar ... --spring.profiles.active=local` started the application without the `local` profile ("Failed to configure a DataSource") | valid | README now sets `SPRING_PROFILES_ACTIVE` for PowerShell and avoids `&&`, which Windows PowerShell 5.1 does not support (README commit in PR 4) |
+
+Notes: none of the AI reviewers caught this; it only shows up when the instructions are followed on the target platform.
