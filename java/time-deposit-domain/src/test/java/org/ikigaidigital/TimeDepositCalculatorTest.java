@@ -97,6 +97,13 @@ class TimeDepositCalculatorTest {
     }
 
     @Test
+    @DisplayName("a negative balance gets negative interest, rounded HALF_UP away from zero")
+    void roundsNegativeInterestHalfUpAwayFromZero() {
+        // -50 * 0.03 / 12 = -0.125 exactly -> HALF_UP -> -0.13; -50.00 + -0.13 = -50.13
+        assertThat(balanceAfterUpdate("student", 31, -50.00)).isEqualTo(-50.13);
+    }
+
+    @Test
     @DisplayName("every deposit in the list is updated in place; id, plan type and days stay unchanged")
     void updatesEveryDepositInPlaceIndependently() {
         // An immutable list: the calculator may only update the deposits, not the list itself.
