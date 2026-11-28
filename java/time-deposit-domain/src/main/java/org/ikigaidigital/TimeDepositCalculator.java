@@ -4,33 +4,26 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 
+/** Adds one month of interest to every deposit; the interest rule of each plan is an {@link InterestPolicy}. */
 public class TimeDepositCalculator {
-    private final List<InterestPolicy> policies = List.of(new BasicInterestPolicy(), new StudentInterestPolicy());
+    private final List<InterestPolicy> policies =
+            List.of(new BasicInterestPolicy(), new StudentInterestPolicy(), new PremiumInterestPolicy());
 
-    public void updateBalance(List<TimeDeposit> xs) {
-        for (int i = 0; i < xs.size(); i++) {
-            double interest = monthlyInterest(xs.get(i));
-
-            double a2d = xs.get(i).getBalance() + (new BigDecimal(interest).setScale(2, RoundingMode.HALF_UP)).doubleValue();
-            xs.get(i).setBalance(a2d);
+    public void updateBalance(List<TimeDeposit> deposits) {
+        for (TimeDeposit deposit : deposits) {
+            // Rounding exactly as before the refactoring: new BigDecimal(double) takes the exact binary value
+            // of the interest, while BigDecimal.valueOf(double) would round its decimal string and change
+            // some cents (e.g. 0.01499.. would become 0.02 instead of 0.01).
+            double roundedInterest = new BigDecimal(monthlyInterest(deposit)).setScale(2, RoundingMode.HALF_UP).doubleValue();
+            deposit.setBalance(deposit.getBalance() + roundedInterest);
         }
     }
 
     private double monthlyInterest(TimeDeposit deposit) {
-        for (InterestPolicy policy : policies) {
-            if (policy.supports(deposit.getPlanType())) {
-                return policy.monthlyInterest(deposit);
-            }
-        }
-
-        double interest = 0;
-        if (deposit.getDays() > 30) {
-            if (deposit.getPlanType().equals("premium")) {
-                if (deposit.getDays() > 45) {
-                    interest += deposit.getBalance() * 0.05 / 12;
-                }
-            }
-        }
-        return interest;
+        return policies.stream()
+                .filter(policy -> policy.supports(deposit.getPlanType()))
+                .mapToDouble(policy -> policy.monthlyInterest(deposit))
+                .findFirst()
+                .orElse(0); // unknown plan type: no interest
     }
 }
