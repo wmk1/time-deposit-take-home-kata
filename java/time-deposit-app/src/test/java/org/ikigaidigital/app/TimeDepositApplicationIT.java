@@ -25,7 +25,10 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import tools.jackson.databind.json.JsonMapper;
 
 @Testcontainers
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// SPRING_PROFILES_ACTIVE=local, left set in the shell after a local run, would add the demo data location;
+// test properties take precedence over profile files, so the test always runs only the schema migrations.
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "spring.flyway.locations=classpath:db/migration")
 class TimeDepositApplicationIT {
     @Container
     private static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
