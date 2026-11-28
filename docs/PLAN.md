@@ -116,7 +116,9 @@ Notable prompts are stored in `docs/ai/prompts/`.
 ### Phase 2 — Multi-module restructure
 7. `git mv` existing code into `time-deposit-domain` (package `org.ikigaidigital` unchanged,
    file history preserved).
-8. Empty `adapter-rest`, `adapter-persistence`, `app` modules wired into the parent POM.
+8. `java/pom.xml` becomes the parent POM with `time-deposit-domain` as its only module. The
+   `adapter-rest`, `adapter-persistence` and `app` modules are **not** created empty (an empty module
+   is dead code): each one is added in PR 3 (Phases 5–7) together with its first real content.
 
 ### Phase 3 — Calculator refactoring
 9. `InterestPolicy` — open interface: `supports(planType)`, `monthlyInterest(deposit)`.
