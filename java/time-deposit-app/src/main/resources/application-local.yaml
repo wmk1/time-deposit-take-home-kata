@@ -1,0 +1,10 @@
+server:
+  address: 127.0.0.1
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/time_deposits
+    username: time_deposits
+    password: time_deposits
+  flyway:
+    # Only the opt-in local profile seeds the demo database.
+    locations: classpath:db/migration,classpath:db/demo

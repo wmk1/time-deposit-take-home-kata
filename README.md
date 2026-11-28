@@ -70,3 +70,35 @@ A junior developer implemented domain logic for a time deposit system but did no
 ### Submission Instructions
 - Provide clear instructions on how to trigger the endpoints using the Swagger contract.
 - Email the link to your public GitHub repository.
+
+## Run the Java application locally
+
+Install JDK 21 or newer and Docker with Compose. From the repository root, run:
+
+```sh
+cd java
+docker compose up -d --wait
+./mvnw package
+java -jar time-deposit-app/target/time-deposit-app-1.0-SNAPSHOT.jar --spring.profiles.active=local
+```
+
+On Windows PowerShell, use `./mvnw.cmd package` in place of `./mvnw package`.
+The local profile connects to PostgreSQL on port 5432 and runs the schema and demo migrations.
+The default configuration runs only the schema migrations and takes database settings from
+`SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD`.
+
+Open Swagger UI at `http://localhost:8080/swagger-ui.html`. Expand **GET /time-deposits** and select
+**Try it out** then **Execute** to see the seeded balances and withdrawals. Execute
+**POST /time-deposits/balance-updates** the same way and expect **204 No Content**. Execute GET again
+to see the updated balances. Run `./mvnw verify` with Docker running to include the PostgreSQL
+integration tests.
+
+### Assumptions
+
+- Each successful POST applies another month of interest using the stored days. The command leaves
+  the days and withdrawal history unchanged and commits all balances together.
+- Withdrawals are historical records for the read response and do not affect interest.
+- Balances use the existing Java `Double` API and are stored as `NUMERIC(19,2)` using HALF_UP at
+  the database boundary. Amounts beyond the cent-level precision of `Double` can lose precision
+  in the conversion.
+- Swagger UI and `/v3/api-docs` serve documentation for the two business operations.

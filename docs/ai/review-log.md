@@ -25,6 +25,7 @@ with the columns ID, Severity, Category, Location, Finding, Verdict, Action.
 | 1 | 2 | Claude (chat) | Claude (chat, new session), Claude Opus 5.5 | 11 | 7 | 2 | 0 | 0 | 2 |
 | 1 | 3 | Claude (chat) | Codex, GPT-6.2-Sol, xhigh | 7 | 6 | 1 | 0 | 0 | 0 |
 | 2 | 1 | Claude Code | Codex, GPT-6.2-Sol, xhigh | 3 | 2 | 0 | 0 | 0 | 1 |
+| 3 | 1 | Codex | Claude (chat, new session), Claude Opus 5.5 | 10 | 7 | 0 | 0 | 0 | 3 |
 
 ---
 
@@ -121,3 +122,33 @@ Notes: the fix for PR2-X1-2 adds a test to the characterization test file after 
 untouched; the new test pins original behaviour, so it was added on purpose as a review fix.
 Codex found the null plan type issue on its own and described it more precisely than the pre-check
 (the aborted batch).
+
+## PR 3 - Phases 4-7: ports, PostgreSQL persistence, REST API, application
+
+- Plan phase / steps: Phases 4-7, steps 12-24 (prompt: `docs/ai/prompts/pr3-phases-4-7.md`)
+- Author: Codex (GPT-6.2-Sol)
+- Review mode: regular (one reviewer)
+- Date: 2026-11-28
+
+### Run 1 - Claude (chat, new session; Claude Opus 5.5)
+
+The `/review-pr` skill exists only in Claude Code, so the reviewer read `docs/ai/prompts/review.md` from the
+repository and followed it. It could not run the tests (JDK 11 only, no Maven Central access); the author ran
+`./mvnw verify` with Docker after every fix commit.
+
+| ID | Severity | Category | Location | Finding (short) | Verdict | Action |
+|---|---|---|---|---|---|---|
+| PR3-C1-1 | major | dead code | `TimeDepositApplicationIT.java:29` | `@ActiveProfiles("test")` activates a profile with no configuration | valid | `dbec8f0` |
+| PR3-C1-2 | major | design | `TimeDepositConfiguration.java:24` | Default policy set defined twice (Spring beans and the no-arg calculator); bean order decides "first policy wins" | valid | Calculator bean is `new TimeDepositCalculator()`, policy beans removed: `c4efaef` |
+| PR3-C1-3 | minor | tests | `JdbcTimeDepositRepository.java:36` | `FOR NO KEY UPDATE` lock and the "no lost interest" claim are untested | valid | Deterministic IT: PostgreSQL reports the second update waiting on the first (`pg_blocking_pids`), final balance has exactly two months of interest: `f011487` |
+| PR3-C1-4 | minor | documentation | `java/pom.xml:25` | Outdated comment about modules added in PR 3 | valid | `4257998` |
+| PR3-C1-5 | minor | documentation | `docs/PLAN.md:140` | Plan does not match the code (demo seed location, `compose.yaml`) | valid | `5bc173a` |
+| PR3-C1-6 | minor | commits | commit `576987f` | App wiring committed without a test; the E2E test follows in `5b18bbc` | won't fix | Would need a history rewrite; both commits are in the same PR |
+| PR3-C1-7 | nit | design | `JdbcTimeDepositRepository.java:47` | One `UPDATE` per deposit instead of a batch | won't fix | Monthly job on few rows; a batch adds code without a measurable benefit here |
+| PR3-C1-8 | nit | design | `TimeDepositWithWithdrawals.java:5` | Record equality depends on `TimeDeposit` identity | won't fix | The service test checks that the repository's objects are passed through unchanged, so identity is the intended comparison |
+| PR3-C1-9 | nit | build | `time-deposit-adapter-rest/pom.xml:19` | Tool versions hardcoded in the module; redundant `useSpringBoot3=false` | valid | `eb27933` |
+| PR3-C1-10 | nit | design | `V1__create_time_deposit_tables.sql:10` | No index on `withdrawals("timeDepositId")` used by the read join | valid | Added to V1 (not deployed anywhere yet): `36e2647` |
+
+Notes: editing V1 changes its Flyway checksum; a local database created before `36e2647` has to be recreated
+(`docker compose down -v`). The reviewer found two real AI artifacts (an unused test profile, duplicated wiring)
+that the author's own self-check missed.
