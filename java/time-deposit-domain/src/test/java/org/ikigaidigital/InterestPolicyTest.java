@@ -20,11 +20,15 @@ class InterestPolicyTest {
     static Stream<Arguments> unroundedInterest() {
         return Stream.of(
                 // 10 * 0.01 / 12 = 0.0083333.. as the nearest double, not rounded to cents
-                arguments(named("basic", new BasicInterestPolicy()), new TimeDeposit(1, "basic", 10.00, 31), 0.008333333333333333));
+                arguments(named("basic", new BasicInterestPolicy()), new TimeDeposit(1, "basic", 10.00, 31), 0.008333333333333333),
+                // 10 * 0.03 / 12 = 0.024999999999999998 as a double (0.03 is not exact in binary)
+                arguments(named("student", new StudentInterestPolicy()), new TimeDeposit(1, "student", 10.00, 31), 0.024999999999999998));
     }
 
     static Stream<Arguments> policies() {
-        return Stream.of(arguments(named("basic", new BasicInterestPolicy())));
+        return Stream.of(
+                arguments(named("basic", new BasicInterestPolicy())),
+                arguments(named("student", new StudentInterestPolicy())));
     }
 
     @ParameterizedTest(name = "{0} policy")
